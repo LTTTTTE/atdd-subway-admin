@@ -1,8 +1,11 @@
 package wooteco.subway.admin.acceptance;
 
+import static org.assertj.core.api.Assertions.*;
+
 import java.time.LocalTime;
 import java.time.format.DateTimeFormatter;
 import java.util.HashMap;
+import java.util.List;
 import java.util.Map;
 
 import io.restassured.RestAssured;
@@ -53,11 +56,13 @@ public class LineStationAcceptanceTest {
 	void manageLineStation() {
 		StationResponse firstStation = createStation("잠실");
 		StationResponse secondStation = createStation("잠실새내");
-		LineResponse line = createLine("2호선");
+		LineResponse firstLine = createLine("2호선");
 
-		addLineStation(line.getId(), null, firstStation.getId());
+		addLineStation(firstLine.getId(), null, firstStation.getId());
 
-		//createLineStation(1L, null, 1L);
+		List<LineResponse> lines = getLines();
+		LineResponse foundFirstLine = getLine(lines.get(0).getId());
+		assertThat(foundFirstLine.getStations()).hasSize(1);
 	}
 
 	private StationResponse createStation(String name) {
@@ -93,9 +98,28 @@ public class LineStationAcceptanceTest {
 			log().all().extract().as(LineResponse.class);
 	}
 
+	private LineResponse getLine(Long id) {
+		return given().when().
+			get("/lines/" + id).
+			then().
+			log().all().
+			extract().as(LineResponse.class);
+	}
+
+	private List<LineResponse> getLines() {
+		return
+			given().
+				when().
+				get("/lines").
+				then().
+				log().all().
+				extract().
+				jsonPath().getList(".", LineResponse.class);
+	}
+
 	private void addLineStation(Long lineId, Long preStationId, Long stationId) {
 		Map<String, String> params = new HashMap<>();
-		params.put("line", String.valueOf(lineId));
+		// params.put("line", String.valueOf(lineId));
 		params.put("preStationId", String.valueOf(preStationId));
 		params.put("stationId", String.valueOf(stationId));
 		params.put("distance", "1000");
@@ -109,6 +133,6 @@ public class LineStationAcceptanceTest {
 			post("/lineStation/" + lineId).
 			then().
 			log().all().
-			statusCode(HttpStatus.CREATED.value());
+			statusCode(HttpStatus.OK.value());
 	}
 }
